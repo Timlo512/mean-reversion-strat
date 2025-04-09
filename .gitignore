@@ -1,0 +1,6 @@
+data/**
+clientportal.gw
+.venv
+__pycache__
+test**
+setup/**
