@@ -1,4 +1,6 @@
 import psycopg2
+import pandas as pd
+from typing import Union
 
 # Backlog PostgresRepo to distinguish different database connections
 
@@ -10,13 +12,15 @@ _dtype_dict = {
 }
 
 class PostgresConnector:
-    def __init__(self, dbname, user, password, host='localhost', port=5432):
+    def __init__(self, dbname, user, password, host='localhost', port=5432, **kwargs):
+        schema = kwargs.get('schema', 'public')
         self.connection = psycopg2.connect(
             dbname=dbname,
             user=user,
             password=password,
             host=host,
-            port=port
+            port=port,
+            schema=schema
         )
         self.cursor = self.connection.cursor()
 
@@ -56,12 +60,11 @@ class PostgresConnector:
         self.create_table(table_name, col_dict, with_id)
         return True
         
-
     def execute_query(self, query):
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
-    def write_data(self, df, table_name, if_exists='append'):
+    def write_data(self, data: Union[list[str], pd.DataFrame], table_name, if_exists='append', conflict_columns = None, **kwargs):
         """
         Write data to the database.
         Args:
@@ -69,14 +72,38 @@ class PostgresConnector:
             table_name (str): The name of the table to write to.
             if_exists (str): What to do if the table already exists.
         """
+        if isinstance(data, pd.DataFrame):
+            df = data
+        else:
+            df = pd.DataFrame(data)
         try:
+            # Create table if it doesn't exist
+            check = self.create_table_by_df(df, table_name, **kwargs)
+
             # Convert DataFrame to list of tuples
             data = [tuple(row) for row in df.to_numpy()]
 
             # Create insert query
             columns = ', '.join(df.columns)
             placeholders = ', '.join(['%s'] * len(df.columns))
-            insert_query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+
+            if if_exists == 'upsert':
+                if not conflict_columns:
+                    raise ValueError("conflict_columns must be specified for upsert operations.")
+
+                # Build the ON CONFLICT clause
+                conflict_clause = ', '.join(conflict_columns)
+                update_clause = ', '.join([f"{col} = EXCLUDED.{col}" for col in df.columns])
+
+                insert_query = f"""
+                    INSERT INTO {table_name} ({columns}) 
+                    VALUES ({placeholders})
+                    ON CONFLICT ({conflict_clause})
+                    DO UPDATE SET {update_clause};
+                """
+            else:  # Default to 'append'
+                insert_query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+
 
             # Execute insert query
             self.cursor.executemany(insert_query, data)
@@ -85,4 +112,31 @@ class PostgresConnector:
             print(f"Error writing data: {e}")
             self.connection.rollback()
 
+    def delete_data(self, table_name, condition):
+        """
+        Delete data from the database.
+        Args:
+            table_name (str): The name of the table to delete from.
+            condition (str): The condition for deletion.
+        """
+        try:
+            delete_query = f"DELETE FROM {table_name} WHERE {condition};"
+            self.cursor.execute(delete_query)
+            self.connection.commit()
+        except Exception as e:
+            print(f"Error deleting data: {e}")
+            self.connection.rollback()
 
+    def drop_table(self, table_name):
+        """
+        Drop a table from the database.
+        Args:
+            table_name (str): The name of the table to drop.
+        """
+        try:
+            drop_query = f"DROP TABLE IF EXISTS {table_name};"
+            self.cursor.execute(drop_query)
+            self.connection.commit()
+        except Exception as e:
+            print(f"Error dropping table: {e}")
+            self.connection.rollback()

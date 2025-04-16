@@ -1,8 +1,11 @@
+
+
 from typing import Union
 import pandas as pd
 import requests
 import logging
 from utils import _handle_res
+
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -15,14 +18,12 @@ log = logging.getLogger(__name__)
 class MarketDataCollector:
 
     def __init__(self, baseUrl, storage_repo = None, verify_ssl = False):
-        
         self.storage_repo = storage_repo
         self.baseUrl = baseUrl
         self.verify_ssl = verify_ssl
 
         self.__setup_headers()
         self._verify_auth_status()
-
 
     def __setup_headers(self):
         self.headers = {
@@ -65,7 +66,8 @@ class MarketDataCollector:
             verify=self.verify_ssl,
         )
         data = _handle_res(res, "Error fetching conids by exchange")
-        return data if not useDf else pd.DataFrame(data)
+        data = data if not useDf else pd.DataFrame(data)
+        return data
     
     def search_conids_by_symbol(self, symbols: Union[list[str], str], useDf: bool = False):
         """
@@ -87,7 +89,7 @@ class MarketDataCollector:
         )
         data = _handle_res(res, "Error fetching conids by symbol")
         return data if not useDf else pd.DataFrame(data)
-    
+   
     # hmds
     def get_historical_data_by_conid(self, conid: int, period: str = "1d", bar: str = "1min", useDf: bool = False, **kwargs):
         """
@@ -126,4 +128,31 @@ class MarketDataCollector:
         data = _handle_res(res, "Error fetching historical data by conid")
         return data if not useDf else pd.DataFrame(data)
 
+    def get_live_snapshot_by_conids(self, conids: list | int, useDf: bool = False, **kwargs):
+        """
+        Get Live market data by conid. (Live Market Data Snapshot -> Free)
+        It uses the direct connection to the market data farm.
+        Args:
+            conids (list): Required. The conids to search for.
+            useDf (bool): Whether to return the result as a DataFrame or not.
+            fields (str): The fields to return. Default is 31,84,86.
+                
+            Remarks: 31: Last Price, 84: Bid Price, 86: Ask Price
+        Returns:
+            list/ Dataframe: A list or Dataframe of live market data for the specified conids.
+        Ref. https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#md
+        """
+        
+        log.info(f"Getting live snapshot: {conids}")
 
+        fields = kwargs.get("fields", "31,84,86") # 31: Last Price, 84: Bid Price, 86: Ask Price
+        conids = ','.join(map(str, conids)) if isinstance(conids, list) else conids
+
+        endpoint = f"/iserver/marketdata/snapshot?conids={conids}&fields={fields}"
+        res = requests.get(
+            f"{self.baseUrl}{endpoint}",
+            headers=self.headers,
+            verify=self.verify_ssl,
+        )
+        data = _handle_res(res, "Error fetching live data by conids")
+        return data if not useDf else pd.DataFrame(data)
