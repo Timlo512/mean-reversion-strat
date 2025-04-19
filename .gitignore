@@ -4,3 +4,4 @@ clientportal.gw
 __pycache__
 test**
 setup/**
+config/DBConfig.yml
