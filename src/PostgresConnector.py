@@ -13,14 +13,13 @@ _dtype_dict = {
 
 class PostgresConnector:
     def __init__(self, dbname, user, password, host='localhost', port=5432, **kwargs):
-        schema = kwargs.get('schema', 'public')
+        self.schema = kwargs.get('schema', 'public')
         self.connection = psycopg2.connect(
             dbname=dbname,
             user=user,
             password=password,
             host=host,
-            port=port,
-            schema=schema
+            port=port
         )
         self.cursor = self.connection.cursor()
 
@@ -103,7 +102,6 @@ class PostgresConnector:
                 """
             else:  # Default to 'append'
                 insert_query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
-
 
             # Execute insert query
             self.cursor.executemany(insert_query, data)

@@ -1,0 +1,12 @@
+Name: DailyMarketDataCollect
+BaseUrl: https://localhost:5001/v1/api
+VerifySSL: false
+Schema: market_data
+Tasks:
+  - Name: ConidsByExchange
+    TaskType: DataCollection
+    FunctionName: search_conids_by_exchange
+    TableName: conids_by_exchange
+    Params:
+      exchange: NYSE
+      useDf: true

@@ -4,7 +4,7 @@ from typing import Union
 import pandas as pd
 import requests
 import logging
-from utils import _handle_res
+from src.utils import _handle_res
 
 
 from dotenv import load_dotenv
@@ -17,8 +17,7 @@ log = logging.getLogger(__name__)
 
 class MarketDataCollector:
 
-    def __init__(self, baseUrl, storage_repo = None, verify_ssl = False):
-        self.storage_repo = storage_repo
+    def __init__(self, baseUrl, verify_ssl = False):
         self.baseUrl = baseUrl
         self.verify_ssl = verify_ssl
 
@@ -91,6 +90,7 @@ class MarketDataCollector:
         return data if not useDf else pd.DataFrame(data)
    
     # hmds
+    # [Backlog]: add a callback to call itself once when failed
     def get_historical_data_by_conid(self, conid: int, period: str = "1d", bar: str = "1min", useDf: bool = False, **kwargs):
         """
         Get historical data by conid. (Historical Market Data Beta)
