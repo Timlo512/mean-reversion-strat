@@ -1,0 +1,53 @@
+Name: DailyMarketDataCollect
+BaseUrl: https://localhost:5001/v1/api
+VerifySSL: false
+Schema: market_data
+Tasks:
+  - Name: ConidsByExchange
+    TaskType: DataCollection
+    FunctionName: search_conids_by_exchange
+    TableName: conids_by_exchange
+    Params:
+      exchange: NYSE
+      useDf: true
+    IfExists: upsert
+    ConflictColumns:
+      - conid
+
+  - Name: HistoricalDataByConid
+    TaskType: DataCollection
+    FunctionName: get_historical_data_by_conid
+    TableName: historical_data_by_conid
+    Params:
+      conid: 416843
+      useDf: true
+      period: 1d
+      bar: 1min
+      outsideRth: true
+    IfExists: upsert
+    ConflictColumns:
+      - conid
+      - t
+    EnforceCols:
+      startTimeVal: bigint
+      endTimeVal: bigint
+      t: bigint
+
+  - Name: HistoricalDataByConidInit
+    TaskType: DataCollection
+    FunctionName: get_historical_data_by_conid
+    TableName: historical_data_by_conid
+    Params:
+      conid: 416843
+      useDf: true
+      period: 365d
+      bar: 1min
+      outsideRth: true
+    IfExists: upsert
+    ConflictColumns:
+      - conid
+      - t
+    EnforceCols:
+      startTimeVal: bigint
+      endTimeVal: bigint
+      t: bigint

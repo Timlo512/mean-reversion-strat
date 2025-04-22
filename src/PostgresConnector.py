@@ -13,14 +13,12 @@ _dtype_dict = {
 
 class PostgresConnector:
     def __init__(self, dbname, user, password, host='localhost', port=5432, **kwargs):
-        schema = kwargs.get('schema', 'public')
         self.connection = psycopg2.connect(
             dbname=dbname,
             user=user,
             password=password,
             host=host,
-            port=port,
-            schema=schema
+            port=port
         )
         self.cursor = self.connection.cursor()
 
@@ -35,13 +33,18 @@ class PostgresConnector:
         self.cursor.execute("SELECT current_user;")
         return self.cursor.fetchone()[0]
     
-    def create_table(self, table_name, columns, with_id=True):
+    def create_table(self, table_name, columns, with_id=True, unique_cols=None, enforce_cols={}):
         try:
             ddl = f"CREATE TABLE IF NOT EXISTS {table_name} ("
             if with_id:
                 ddl += "id SERIAL PRIMARY KEY, "
             for column, data_type in columns.items():
+                data_type = enforce_cols.get(column, data_type)
                 ddl += f"{column} {data_type}, "
+
+            if unique_cols:
+                unique_cols = ', '.join(unique_cols)
+                ddl += f"UNIQUE ({unique_cols}), "
             ddl = ddl.rstrip(", ") + ");"
             print(ddl)
 
@@ -52,12 +55,12 @@ class PostgresConnector:
             self.connection.rollback()
 
     # def create_table_by_df(self, df, table_name):
-    def create_table_by_df(self, df, table_name, with_id = True):
+    def create_table_by_df(self, df, table_name, with_id = True, unique_cols = None, enforce_cols = {}):
         # Parse the col names
         col_dict = {key: _dtype_dict[str(val)] for key, val in df.dtypes.to_dict().items()}
 
         # Create the table statement
-        self.create_table(table_name, col_dict, with_id)
+        self.create_table(table_name, col_dict, with_id, unique_cols, enforce_cols)
         return True
         
     def execute_query(self, query):
@@ -76,9 +79,14 @@ class PostgresConnector:
             df = data
         else:
             df = pd.DataFrame(data)
+
+        auto_create = kwargs.get("auto_create", True)
+    
         try:
             # Create table if it doesn't exist
-            check = self.create_table_by_df(df, table_name, **kwargs)
+            if auto_create:
+                enforce_cols = kwargs.get("enforce_cols", {})
+                check = self.create_table_by_df(df, table_name, unique_cols=conflict_columns, enforce_cols=enforce_cols)
 
             # Convert DataFrame to list of tuples
             data = [tuple(row) for row in df.to_numpy()]
@@ -103,7 +111,6 @@ class PostgresConnector:
                 """
             else:  # Default to 'append'
                 insert_query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
-
 
             # Execute insert query
             self.cursor.executemany(insert_query, data)

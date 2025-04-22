@@ -4,7 +4,7 @@ from typing import Union
 import pandas as pd
 import requests
 import logging
-from utils import _handle_res
+from src.utils import _handle_res, expand_list_fr_dict
 
 
 from dotenv import load_dotenv
@@ -17,8 +17,7 @@ log = logging.getLogger(__name__)
 
 class MarketDataCollector:
 
-    def __init__(self, baseUrl, storage_repo = None, verify_ssl = False):
-        self.storage_repo = storage_repo
+    def __init__(self, baseUrl, verify_ssl = False):
         self.baseUrl = baseUrl
         self.verify_ssl = verify_ssl
 
@@ -91,6 +90,7 @@ class MarketDataCollector:
         return data if not useDf else pd.DataFrame(data)
    
     # hmds
+    # [Backlog]: add a callback to call itself once when failed
     def get_historical_data_by_conid(self, conid: int, period: str = "1d", bar: str = "1min", useDf: bool = False, **kwargs):
         """
         Get historical data by conid. (Historical Market Data Beta)
@@ -118,15 +118,31 @@ class MarketDataCollector:
 
         outsideRth = kwargs.get("outsideRth", False)
         barType = kwargs.get("barType", "Last")
+        retry = kwargs.get("retry", 0)
 
-        endpoint = f"/hmds/history?conid={conid}&period={period}&bar={bar}&outsideRth={str(outsideRth).lower()}&barType={barType}"
-        res = requests.get(
-            f"{self.baseUrl}{endpoint}",
-            headers=self.headers,
-            verify=self.verify_ssl,
-        )
-        data = _handle_res(res, "Error fetching historical data by conid")
-        return data if not useDf else pd.DataFrame(data)
+        try:
+            endpoint = f"/hmds/history?conid={conid}&period={period}&bar={bar}&outsideRth={str(outsideRth).lower()}&barType={barType}"
+            res = requests.get(
+                f"{self.baseUrl}{endpoint}",
+                headers=self.headers,
+                verify=self.verify_ssl,
+            )
+            data = _handle_res(res, "Error fetching historical data by conid")
+            
+            # Add identifier
+            data['conid'] = str(conid)
+            data['period'] = period
+            data['bar'] = bar
+
+            data = expand_list_fr_dict(data, "data")
+            return data if not useDf else pd.DataFrame(data)
+        except Exception as e:
+            log.error(f"Error fetching historical data by conid: {e}")
+            if retry > 0:
+                log.info(f"Retrying... ({retry})")
+                return self.get_historical_data_by_conid(conid, period, bar, useDf, retry=retry+1, **kwargs)
+            else:
+                raise e
 
     def get_live_snapshot_by_conids(self, conids: list | int, useDf: bool = False, **kwargs):
         """
