@@ -144,6 +144,34 @@ class MarketDataCollector:
             else:
                 raise e
 
+    def get_historical_data_by_conids(self, conids: list | str, period: str = "1d", bar: str = "1min", useDf: bool = False, **kwargs):
+        """
+        Get historical data by conids. (Historical Market Data Beta)
+        It uses the direct connection to the market data farm.
+        Args:
+            conids (list or str): Required. The conids to search for. if 
+            period (str): The period of the historical data. Default is 1d.
+            bar (str): The size of the bars. Default is 1min.
+            useDf (bool): Whether to return the result as a DataFrame or not.
+            **kwargs: Additional arguments to pass to the request.
+            outsideRth (bool): Whether to include data outside of regular trading hours. Default is False
+            barType (str): The type of bar to return. Default is Last.
+        Returns:
+            list/ Dataframe: A list or Dataframe of historical data for the specified conids.
+        Ref. https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#hist-md-beta
+        """
+        
+        log.info(f"Getting historical data by conids: {conids}")
+        conids = conids if isinstance(conids, list) else conids.split(",")
+
+        result_list = []
+        for conid in conids:
+            print(conid)
+            data = self.get_historical_data_by_conid(conid, period, bar, useDf=False, **kwargs)
+            result_list.extend(data)
+        return result_list if not useDf else pd.DataFrame(result_list)
+        
+
     def get_live_snapshot_by_conids(self, conids: list | int, useDf: bool = False, **kwargs):
         """
         Get Live market data by conid. (Live Market Data Snapshot -> Free)
