@@ -51,3 +51,22 @@ Tasks:
       startTimeVal: bigint
       endTimeVal: bigint
       t: bigint
+
+  - Name: HistoricalDataByConids
+    TaskType: DataCollection
+    FunctionName: get_historical_data_by_conids
+    TableName: historical_data_by_conid
+    Params:
+      conids: [265598, 4815747]
+      useDf: true
+      period: 1d
+      bar: 1min
+      outsideRth: true
+    IfExists: upsert
+    ConflictColumns:
+      - conid
+      - t
+    EnforceCols:
+      startTimeVal: bigint
+      endTimeVal: bigint
+      t: bigint
