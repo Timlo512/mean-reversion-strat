@@ -5,3 +5,5 @@ __pycache__
 test**
 setup/**
 config/DBConfig.yml
+.virtual_documents
+.ipynb_checkpoints
