@@ -36,4 +36,5 @@ def get_db_connector(db_type: str):
     if db_type == 'postgres':
         return PostgresConnector
     else:
-        raise ValueError(f"Unsupported database type: {db_type}")
+        print("Not supported db type")
+        return None

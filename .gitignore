@@ -7,3 +7,7 @@ setup/**
 config/DBConfig.yml
 .virtual_documents
 .ipynb_checkpoints
+IBJts
+.env
+check**
+
