@@ -1,6 +1,6 @@
 import psycopg2
 import pandas as pd
-from typing import Union
+from typing import Union, List, Tuple
 
 # Backlog PostgresRepo to distinguish different database connections
 
@@ -63,22 +63,32 @@ class PostgresConnector:
         self.create_table(table_name, col_dict, with_id, unique_cols, enforce_cols)
         return True
         
-    def execute_query(self, query):
+    def execute_query(self, query: str) -> List[Tuple]:
         self.cursor.execute(query)
         return self.cursor.fetchall()
+    
+    def read_sql_by_pd(self, query: str) -> pd.DataFrame:
+        return pd.read_sql_query(query, self.connection)
 
-    def write_data(self, data: Union[list[str], pd.DataFrame], table_name, if_exists='append', conflict_columns = None, **kwargs):
+    def write_data(self, data: Union[list[str], pd.DataFrame, dict], table_name, if_exists='append', conflict_columns = None, **kwargs) -> bool:
         """
         Write data to the database.
         Args:
             df (DataFrame): The DataFrame to write.
             table_name (str): The name of the table to write to.
-            if_exists (str): What to do if the table already exists.
+            if_exists (str): What to do if the table already exists. Allowed values
+                ['append', 'upsert']. Default is 'append'.
         """
         if isinstance(data, pd.DataFrame):
             df = data
-        else:
+
+        elif isinstance(data, dict):
+            print("data is a dict, converting to DataFrame")
+            df = pd.DataFrame([data])
+        elif isinstance(data, list):
             df = pd.DataFrame(data)
+        else:
+            raise ValueError("Not supported data type")
 
         auto_create = kwargs.get("auto_create", True)
     
@@ -115,9 +125,11 @@ class PostgresConnector:
             # Execute insert query
             self.cursor.executemany(insert_query, data)
             self.connection.commit()
+            return True
         except Exception as e:
             print(f"Error writing data: {e}")
             self.connection.rollback()
+            return False
 
     def delete_data(self, table_name, condition):
         """

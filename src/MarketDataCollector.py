@@ -200,3 +200,5 @@ class MarketDataCollector:
         )
         data = _handle_res(res, "Error fetching live data by conids")
         return data if not useDf else pd.DataFrame(data)
+
+
