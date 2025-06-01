@@ -36,10 +36,20 @@ To run this project, ensure you have the following installed and configured:
      # For Windows:
      # venv\Scripts\activate
      ```
+     or if you are using Conda
+     ```bash
+      conda create --prefix .venv python=3.11
+      conda activate ./.venv
+     ```
    - Install the required dependencies using `pip`:
      ```bash
      pip install -r requirements.txt
      ```
+### Steps
+
+1. Create DBConfig.yml
+2. Setup pg_role_setup.sql script
+3. Trigger pipeline/copy_dags.sh
 
 Once the prerequisites are installed, you can proceed with configuring and running the project.
 
