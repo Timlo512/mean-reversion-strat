@@ -144,7 +144,7 @@ class MarketDataCollector:
             else:
                 raise e
 
-    def get_historical_data_by_conids(self, conids: list | str, period: str = "1d", bar: str = "1min", useDf: bool = False, **kwargs):
+    def get_historical_data_by_conids(self, conids: Union[list, str], period: str = "1d", bar: str = "1min", useDf: bool = False, **kwargs):
         """
         Get historical data by conids. (Historical Market Data Beta)
         It uses the direct connection to the market data farm.
@@ -172,7 +172,7 @@ class MarketDataCollector:
         return result_list if not useDf else pd.DataFrame(result_list)
         
 
-    def get_live_snapshot_by_conids(self, conids: list | int, useDf: bool = False, **kwargs):
+    def get_live_snapshot_by_conids(self, conids: Union[list, int], useDf: bool = False, **kwargs):
         """
         Get Live market data by conid. (Live Market Data Snapshot -> Free)
         It uses the direct connection to the market data farm.
